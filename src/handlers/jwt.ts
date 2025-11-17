@@ -23,12 +23,28 @@ export async function handleJwtGeneration(request: FastifyRequest, reply: Fastif
 
     const vortex = new Vortex(config.apiKey);
 
-    const jwt = vortex.generateJwt({
-      userId: authenticatedUser.userId,
-      identifiers: authenticatedUser.identifiers,
-      groups: authenticatedUser.groups,
-      role: authenticatedUser.role,
-    });
+    // Validate required fields
+    if (!authenticatedUser.userId || !authenticatedUser.userEmail) {
+      return createErrorResponse(reply, 'Invalid user format: must provide userId and userEmail', 500);
+    }
+
+    // Generate JWT with new format
+    const jwtParams: any = {
+      user: {
+        id: authenticatedUser.userId,
+        email: authenticatedUser.userEmail,
+        ...(authenticatedUser.adminScopes && authenticatedUser.adminScopes.length > 0 && {
+          adminScopes: authenticatedUser.adminScopes
+        }),
+      },
+    };
+
+    // Add attributes if present
+    if (authenticatedUser.attributes) {
+      jwtParams.attributes = authenticatedUser.attributes;
+    }
+
+    const jwt = vortex.generateJwt(jwtParams);
 
     return createApiResponse(reply, { jwt });
   } catch (error) {
