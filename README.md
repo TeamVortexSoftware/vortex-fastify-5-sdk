@@ -12,7 +12,11 @@ npm install @teamvortexsoftware/vortex-fastify-5-sdk @teamvortexsoftware/vortex-
 
 ```typescript
 import Fastify from 'fastify';
-import { vortexPlugin, configureVortex, createAllowAllAccessControl } from '@teamvortexsoftware/vortex-fastify-5-sdk';
+import {
+  vortexPlugin,
+  configureVortex,
+  createAllowAllAccessControl,
+} from '@teamvortexsoftware/vortex-fastify-5-sdk';
 
 const fastify = Fastify();
 
@@ -23,11 +27,13 @@ configureVortex({
   // Required: How to authenticate users (new simplified format)
   authenticateUser: async (request, reply) => {
     const user = await getCurrentUser(request); // Your auth logic
-    return user ? {
-      userId: user.id,
-      userEmail: user.email,
-      adminScopes: user.isAdmin ? ['autoJoin'] : [], // Optional: grant admin capabilities
-    } : null;
+    return user
+      ? {
+          userId: user.id,
+          userEmail: user.email,
+          adminScopes: user.isAdmin ? ['autojoin'] : [], // Optional: grant admin capabilities
+        }
+      : null;
   },
 
   // Simple: Allow all operations (customize for production)
@@ -55,14 +61,14 @@ That's it! Your Fastify app now has all Vortex API endpoints.
 
 Your app automatically gets these API routes:
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/vortex/jwt` | POST | Generate JWT for authenticated user |
-| `/api/vortex/invitations` | GET | Get invitations by target (email/phone) |
-| `/api/vortex/invitations/accept` | POST | Accept multiple invitations |
-| `/api/vortex/invitations/:id` | GET/DELETE | Get or delete specific invitation |
-| `/api/vortex/invitations/:id/reinvite` | POST | Resend invitation |
-| `/api/vortex/invitations/by-group/:type/:id` | GET/DELETE | Group-based operations |
+| Endpoint                                     | Method     | Description                             |
+| -------------------------------------------- | ---------- | --------------------------------------- |
+| `/api/vortex/jwt`                            | POST       | Generate JWT for authenticated user     |
+| `/api/vortex/invitations`                    | GET        | Get invitations by target (email/phone) |
+| `/api/vortex/invitations/accept`             | POST       | Accept multiple invitations             |
+| `/api/vortex/invitations/:id`                | GET/DELETE | Get or delete specific invitation       |
+| `/api/vortex/invitations/:id/reinvite`       | POST       | Resend invitation                       |
+| `/api/vortex/invitations/by-group/:type/:id` | GET/DELETE | Group-based operations                  |
 
 ## 🛠️ Setup Options
 
@@ -112,6 +118,7 @@ fastify.delete('/api/vortex/invitations/:invitationId', routes.invitation.delete
 ### 1. Environment Variables
 
 Add to your `.env`:
+
 ```bash
 VORTEX_API_KEY=your_api_key_here
 ```
@@ -121,7 +128,10 @@ VORTEX_API_KEY=your_api_key_here
 #### New Simplified Format (Recommended)
 
 ```typescript
-import { configureVortex, createAllowAllAccessControl } from '@teamvortexsoftware/vortex-fastify-5-sdk';
+import {
+  configureVortex,
+  createAllowAllAccessControl,
+} from '@teamvortexsoftware/vortex-fastify-5-sdk';
 
 configureVortex({
   apiKey: process.env.VORTEX_API_KEY!,
@@ -129,11 +139,13 @@ configureVortex({
   // Required: How to authenticate users (new simplified format)
   authenticateUser: async (request, reply) => {
     const user = await getCurrentUser(request); // Your auth logic
-    return user ? {
-      userId: user.id,
-      userEmail: user.email,
-      adminScopes: user.isAdmin ? ['autoJoin'] : [], // Optional: grant admin capabilities
-    } : null;
+    return user
+      ? {
+          userId: user.id,
+          userEmail: user.email,
+          adminScopes: user.isAdmin ? ['autojoin'] : [], // Optional: grant admin capabilities
+        }
+      : null;
   },
 
   // Simple: Allow all operations (customize for production)
@@ -151,12 +163,14 @@ configureVortex({
 
   authenticateUser: async (request, reply) => {
     const user = await getCurrentUser(request);
-    return user ? {
-      userId: user.id,
-      identifiers: [{ type: 'email', value: user.email }],
-      groups: user.groups, // [{ type: 'team', groupId: '123', name: 'My Team' }]
-      role: user.role, // Optional
-    } : null;
+    return user
+      ? {
+          userId: user.id,
+          identifiers: [{ type: 'email', value: user.email }],
+          groups: user.groups, // [{ type: 'team', groupId: '123', name: 'My Team' }]
+          role: user.role, // Optional
+        }
+      : null;
   },
 
   ...createAllowAllAccessControl(),
@@ -176,11 +190,13 @@ configureVortexLazy(async () => ({
   authenticateUser: async (request, reply) => {
     // This can make database calls, etc.
     const user = await getUserFromDatabase(request);
-    return user ? {
-      userId: user.id,
-      userEmail: user.email,
-      adminScopes: await checkUserAdminStatus(user.id) ? ['autoJoin'] : [],
-    } : null;
+    return user
+      ? {
+          userId: user.id,
+          userEmail: user.email,
+          adminScopes: (await checkUserAdminStatus(user.id)) ? ['autojoin'] : [],
+        }
+      : null;
   },
 
   ...createAllowAllAccessControl(),
@@ -194,7 +210,9 @@ For production apps, replace `createAllowAllAccessControl()` with proper authori
 ```typescript
 configureVortex({
   apiKey: process.env.VORTEX_API_KEY!,
-  authenticateUser: async (request, reply) => { /* your auth */ },
+  authenticateUser: async (request, reply) => {
+    /* your auth */
+  },
 
   // Custom access control
   canDeleteInvitation: async (request, reply, user, resource) => {
@@ -202,8 +220,8 @@ configureVortex({
   },
 
   canAccessInvitationsByGroup: async (request, reply, user, resource) => {
-    return user?.groups.some(g =>
-      g.type === resource?.groupType && g.groupId === resource?.groupId
+    return user?.groups.some(
+      (g) => g.type === resource?.groupType && g.groupId === resource?.groupId
     );
   },
 
@@ -257,12 +275,13 @@ await fetch(`/api/vortex/invitations/${invitationId}`, { method: 'DELETE' });
 ## 🚀 Fastify-Specific Features
 
 ### Plugin Architecture
+
 The Fastify SDK leverages Fastify's native plugin system for optimal performance and encapsulation:
 
 ```typescript
 // Clean plugin registration
 await fastify.register(vortexPlugin, {
-  prefix: '/api/vortex'
+  prefix: '/api/vortex',
 });
 
 // Or with encapsulation
@@ -275,6 +294,7 @@ await fastify.register(async function (fastify) {
 ```
 
 ### Performance Benefits
+
 - **Native Fastify Integration**: Uses FastifyRequest and FastifyReply directly
 - **Automatic JSON Parsing**: Body parsing handled by Fastify automatically
 - **Optimized Routing**: Leverages Fastify's high-performance router
@@ -282,14 +302,14 @@ await fastify.register(async function (fastify) {
 
 ## 🔄 Comparison with Other SDKs
 
-| Feature | Fastify SDK | Express SDK | Next.js SDK |
-|---------|-------------|-------------|-------------|
-| **Setup** | `fastify.register(vortexPlugin)` | `app.use(createVortexRouter())` | Multiple route files |
-| **Architecture** | Plugin-based | Middleware-based | File-based routing |
-| **Performance** | High (Fastify native) | Good | Good |
-| **Config** | Same API | Same API | Same API |
-| **Access Control** | Same API | Same API | Same API |
-| **Frontend Integration** | Same React Provider | Same React Provider | Same React Provider |
+| Feature                  | Fastify SDK                      | Express SDK                     | Next.js SDK          |
+| ------------------------ | -------------------------------- | ------------------------------- | -------------------- |
+| **Setup**                | `fastify.register(vortexPlugin)` | `app.use(createVortexRouter())` | Multiple route files |
+| **Architecture**         | Plugin-based                     | Middleware-based                | File-based routing   |
+| **Performance**          | High (Fastify native)            | Good                            | Good                 |
+| **Config**               | Same API                         | Same API                        | Same API             |
+| **Access Control**       | Same API                         | Same API                        | Same API             |
+| **Frontend Integration** | Same React Provider              | Same React Provider             | Same React Provider  |
 
 ## 📦 Direct SDK Usage
 
@@ -336,19 +356,23 @@ fastify.get('/api/custom-invitation/:invitationId', async (request, reply) => {
 ### Common Issues
 
 **Configuration errors**
+
 - Ensure you're calling `configureVortex()` or `configureVortexLazy()` before registering the plugin
 - Check that your `.env` has `VORTEX_API_KEY`
 
 **Plugin registration issues**
+
 - Make sure you're using `await fastify.register(vortexPlugin)`
 - Verify the prefix doesn't conflict with other routes
 
 **Authentication Issues**
+
 - Verify your `authenticateUser` function returns the correct format
 - Check that your authentication middleware is working
 - Make sure JWT requests include authentication cookies/headers
 
 **TypeScript Errors**
+
 - All types are exported from the main package
 - Resource parameters are fully typed for access control hooks
 
