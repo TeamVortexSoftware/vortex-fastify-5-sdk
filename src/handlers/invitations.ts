@@ -158,8 +158,8 @@ export async function handleAcceptInvitations(request: FastifyRequest, reply: Fa
         return createErrorResponse(reply, 'target must have type and value properties', 400);
       }
 
-      if (!['email', 'username', 'phoneNumber', 'sms'].includes(targetObj.type)) {
-        return createErrorResponse(reply, 'target.type must be email, username, phoneNumber, or sms', 400);
+      if (!['email', 'username', 'phoneNumber', 'phone'].includes(targetObj.type)) {
+        return createErrorResponse(reply, 'target.type must be email, username, phoneNumber, or phone', 400);
       }
 
       acceptData = {
