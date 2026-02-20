@@ -272,6 +272,60 @@ export async function handleDeleteInvitationsByGroup(request: FastifyRequest, re
   }
 }
 
+export async function handleSyncInternalInvitation(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    if (request.method !== 'POST') {
+      return createErrorResponse(reply, 'Method not allowed', 405);
+    }
+
+    const body = await parseRequestBody(request) as Record<string, unknown>;
+
+    const { creatorId, targetValue, action, componentId } = body;
+
+    if (!creatorId || typeof creatorId !== 'string') {
+      return createErrorResponse(reply, 'creatorId is required and must be a string', 400);
+    }
+    if (!targetValue || typeof targetValue !== 'string') {
+      return createErrorResponse(reply, 'targetValue is required and must be a string', 400);
+    }
+    if (!action || !['accepted', 'declined'].includes(action as string)) {
+      return createErrorResponse(reply, 'action is required and must be "accepted" or "declined"', 400);
+    }
+    if (!componentId || typeof componentId !== 'string') {
+      return createErrorResponse(reply, 'componentId is required and must be a string', 400);
+    }
+
+    const config = await getVortexConfig();
+    const user = await authenticateRequest(request, reply);
+
+    if (config.canSyncInternalInvitation) {
+      const hasAccess = await config.canSyncInternalInvitation(request, reply, user, {
+        creatorId: sanitizeInput(creatorId as string)!,
+        targetValue: sanitizeInput(targetValue as string)!,
+        action: action as string,
+        componentId: sanitizeInput(componentId as string)!,
+      });
+      if (!hasAccess) {
+        return createErrorResponse(reply, 'Access denied', 403);
+      }
+    } else if (!user) {
+      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+    }
+
+    const vortex = new Vortex(config.apiKey);
+    const result = await vortex.syncInternalInvitation({
+      creatorId: sanitizeInput(creatorId as string)!,
+      targetValue: sanitizeInput(targetValue as string)!,
+      action: action as 'accepted' | 'declined',
+      componentId: sanitizeInput(componentId as string)!,
+    });
+    return createApiResponse(reply, result);
+  } catch (error) {
+    console.error('Error in handleSyncInternalInvitation:', error);
+    return createErrorResponse(reply, 'An error occurred while processing your request', 500);
+  }
+}
+
 export async function handleReinvite(request: FastifyRequest, reply: FastifyReply) {
   try {
     if (request.method !== 'POST') {

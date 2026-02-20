@@ -8,6 +8,7 @@ import {
   handleGetInvitationsByGroup,
   handleDeleteInvitationsByGroup,
   handleReinvite,
+  handleSyncInternalInvitation,
 } from './handlers/invitations';
 
 /**
@@ -21,6 +22,7 @@ export const VORTEX_ROUTES = {
   INVITATIONS_ACCEPT: '/invitations/accept',
   INVITATIONS_BY_GROUP: '/invitations/by-group/:groupType/:groupId',
   INVITATION_REINVITE: '/invitations/:invitationId/reinvite',
+  SYNC_INTERNAL_INVITATION: '/invitation-actions/sync-internal-invitation',
 } as const;
 
 /**
@@ -95,6 +97,15 @@ export function createVortexReinviteRoute() {
 }
 
 /**
+ * Creates individual route handlers for sync internal invitation endpoint
+ */
+export function createVortexSyncInternalInvitationRoute() {
+  return async function(request: FastifyRequest, reply: FastifyReply) {
+    return handleSyncInternalInvitation(request, reply);
+  };
+}
+
+/**
  * Creates all Vortex routes for manual registration
  * This provides individual handlers that can be attached to specific routes
  */
@@ -106,6 +117,7 @@ export function createVortexRoutes() {
     invitationsAccept: createVortexInvitationsAcceptRoute(),
     invitationsByGroup: createVortexInvitationsByGroupRoute(),
     invitationReinvite: createVortexReinviteRoute(),
+    syncInternalInvitation: createVortexSyncInternalInvitationRoute(),
   };
 }
 
@@ -136,6 +148,7 @@ export const vortexPlugin: FastifyPluginAsync = async function vortexPlugin(
   fastify.get(VORTEX_ROUTES.INVITATIONS_BY_GROUP, routes.invitationsByGroup.get);
   fastify.delete(VORTEX_ROUTES.INVITATIONS_BY_GROUP, routes.invitationsByGroup.delete);
   fastify.post(VORTEX_ROUTES.INVITATION_REINVITE, routes.invitationReinvite);
+  fastify.post(VORTEX_ROUTES.SYNC_INTERNAL_INVITATION, routes.syncInternalInvitation);
 };
 
 /**
@@ -166,6 +179,7 @@ export async function registerVortexRoutes(fastify: FastifyInstance, basePath: s
   fastify.get(`${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_GROUP}`, routes.invitationsByGroup.get);
   fastify.delete(`${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_GROUP}`, routes.invitationsByGroup.delete);
   fastify.post(`${cleanBasePath}${VORTEX_ROUTES.INVITATION_REINVITE}`, routes.invitationReinvite);
+  fastify.post(`${cleanBasePath}${VORTEX_ROUTES.SYNC_INTERNAL_INVITATION}`, routes.syncInternalInvitation);
 }
 
 /**

@@ -5,9 +5,11 @@ export type {
   AccessControlHook,
   InvitationResource,
   InvitationTargetResource,
+  SyncInternalInvitationResource,
   GroupResource,
   InvitationAccessHook,
   InvitationTargetAccessHook,
+  SyncInternalInvitationAccessHook,
   GroupAccessHook,
   BasicAccessHook
 } from './config';
@@ -39,6 +41,7 @@ export {
   handleGetInvitationsByGroup,
   handleDeleteInvitationsByGroup,
   handleReinvite,
+  handleSyncInternalInvitation,
 } from './handlers/invitations';
 
 export {
