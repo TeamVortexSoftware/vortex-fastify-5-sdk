@@ -7,6 +7,8 @@ import {
   handleAcceptInvitations,
   handleGetInvitationsByGroup,
   handleDeleteInvitationsByGroup,
+  handleGetInvitationsByScope,
+  handleDeleteInvitationsByScope,
   handleReinvite,
   handleSyncInternalInvitation,
 } from './handlers/invitations';
@@ -20,6 +22,8 @@ export const VORTEX_ROUTES = {
   INVITATIONS: '/invitations',
   INVITATION: '/invitations/:invitationId',
   INVITATIONS_ACCEPT: '/invitations/accept',
+  INVITATIONS_BY_SCOPE: '/invitations/by-scope/:scopeType/:scope',
+  /** @deprecated Use INVITATIONS_BY_SCOPE instead */
   INVITATIONS_BY_GROUP: '/invitations/by-group/:groupType/:groupId',
   INVITATION_REINVITE: '/invitations/:invitationId/reinvite',
   SYNC_INTERNAL_INVITATION: '/invitations/sync-internal-invitation',
@@ -36,7 +40,7 @@ export function createVortexApiPath(baseUrl: string, route: keyof typeof VORTEX_
  * Creates individual route handlers for JWT endpoint
  */
 export function createVortexJwtRoute() {
-  return async function(request: FastifyRequest, reply: FastifyReply) {
+  return async function (request: FastifyRequest, reply: FastifyReply) {
     return handleJwtGeneration(request, reply);
   };
 }
@@ -45,7 +49,7 @@ export function createVortexJwtRoute() {
  * Creates individual route handlers for invitations endpoint
  */
 export function createVortexInvitationsRoute() {
-  return async function(request: FastifyRequest, reply: FastifyReply) {
+  return async function (request: FastifyRequest, reply: FastifyReply) {
     return handleGetInvitationsByTarget(request, reply);
   };
 }
@@ -55,10 +59,10 @@ export function createVortexInvitationsRoute() {
  */
 export function createVortexInvitationRoute() {
   return {
-    get: async function(request: FastifyRequest, reply: FastifyReply) {
+    get: async function (request: FastifyRequest, reply: FastifyReply) {
       return handleGetInvitation(request, reply);
     },
-    delete: async function(request: FastifyRequest, reply: FastifyReply) {
+    delete: async function (request: FastifyRequest, reply: FastifyReply) {
       return handleRevokeInvitation(request, reply);
     },
   };
@@ -68,7 +72,7 @@ export function createVortexInvitationRoute() {
  * Creates individual route handlers for invitations accept endpoint
  */
 export function createVortexInvitationsAcceptRoute() {
-  return async function(request: FastifyRequest, reply: FastifyReply) {
+  return async function (request: FastifyRequest, reply: FastifyReply) {
     return handleAcceptInvitations(request, reply);
   };
 }
@@ -78,10 +82,10 @@ export function createVortexInvitationsAcceptRoute() {
  */
 export function createVortexInvitationsByGroupRoute() {
   return {
-    get: async function(request: FastifyRequest, reply: FastifyReply) {
+    get: async function (request: FastifyRequest, reply: FastifyReply) {
       return handleGetInvitationsByGroup(request, reply);
     },
-    delete: async function(request: FastifyRequest, reply: FastifyReply) {
+    delete: async function (request: FastifyRequest, reply: FastifyReply) {
       return handleDeleteInvitationsByGroup(request, reply);
     },
   };
@@ -91,7 +95,7 @@ export function createVortexInvitationsByGroupRoute() {
  * Creates individual route handlers for reinvite endpoint
  */
 export function createVortexReinviteRoute() {
-  return async function(request: FastifyRequest, reply: FastifyReply) {
+  return async function (request: FastifyRequest, reply: FastifyReply) {
     return handleReinvite(request, reply);
   };
 }
@@ -100,7 +104,7 @@ export function createVortexReinviteRoute() {
  * Creates individual route handlers for sync internal invitation endpoint
  */
 export function createVortexSyncInternalInvitationRoute() {
-  return async function(request: FastifyRequest, reply: FastifyReply) {
+  return async function (request: FastifyRequest, reply: FastifyReply) {
     return handleSyncInternalInvitation(request, reply);
   };
 }
@@ -109,6 +113,20 @@ export function createVortexSyncInternalInvitationRoute() {
  * Creates all Vortex routes for manual registration
  * This provides individual handlers that can be attached to specific routes
  */
+/**
+ * Creates individual route handlers for invitations by scope endpoint
+ */
+export function createVortexInvitationsByScopeRoute() {
+  return {
+    get: async function (request: FastifyRequest, reply: FastifyReply) {
+      return handleGetInvitationsByScope(request, reply);
+    },
+    delete: async function (request: FastifyRequest, reply: FastifyReply) {
+      return handleDeleteInvitationsByScope(request, reply);
+    },
+  };
+}
+
 export function createVortexRoutes() {
   return {
     jwt: createVortexJwtRoute(),
@@ -116,6 +134,7 @@ export function createVortexRoutes() {
     invitation: createVortexInvitationRoute(),
     invitationsAccept: createVortexInvitationsAcceptRoute(),
     invitationsByGroup: createVortexInvitationsByGroupRoute(),
+    invitationsByScope: createVortexInvitationsByScopeRoute(),
     invitationReinvite: createVortexReinviteRoute(),
     syncInternalInvitation: createVortexSyncInternalInvitationRoute(),
   };
@@ -147,6 +166,8 @@ export const vortexPlugin: FastifyPluginAsync = async function vortexPlugin(
   fastify.post(VORTEX_ROUTES.INVITATIONS_ACCEPT, routes.invitationsAccept);
   fastify.get(VORTEX_ROUTES.INVITATIONS_BY_GROUP, routes.invitationsByGroup.get);
   fastify.delete(VORTEX_ROUTES.INVITATIONS_BY_GROUP, routes.invitationsByGroup.delete);
+  fastify.get(VORTEX_ROUTES.INVITATIONS_BY_SCOPE, routes.invitationsByScope.get);
+  fastify.delete(VORTEX_ROUTES.INVITATIONS_BY_SCOPE, routes.invitationsByScope.delete);
   fastify.post(VORTEX_ROUTES.INVITATION_REINVITE, routes.invitationReinvite);
   fastify.post(VORTEX_ROUTES.SYNC_INTERNAL_INVITATION, routes.syncInternalInvitation);
 };
@@ -166,7 +187,10 @@ export const vortexPlugin: FastifyPluginAsync = async function vortexPlugin(
  * await registerVortexRoutes(fastify, '/api/v1/vortex');
  * ```
  */
-export async function registerVortexRoutes(fastify: FastifyInstance, basePath: string = '/api/vortex'): Promise<void> {
+export async function registerVortexRoutes(
+  fastify: FastifyInstance,
+  basePath: string = '/api/vortex'
+): Promise<void> {
   const routes = createVortexRoutes();
   const cleanBasePath = basePath.replace(/\/$/, '');
 
@@ -176,10 +200,27 @@ export async function registerVortexRoutes(fastify: FastifyInstance, basePath: s
   fastify.get(`${cleanBasePath}${VORTEX_ROUTES.INVITATION}`, routes.invitation.get);
   fastify.delete(`${cleanBasePath}${VORTEX_ROUTES.INVITATION}`, routes.invitation.delete);
   fastify.post(`${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_ACCEPT}`, routes.invitationsAccept);
-  fastify.get(`${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_GROUP}`, routes.invitationsByGroup.get);
-  fastify.delete(`${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_GROUP}`, routes.invitationsByGroup.delete);
+  fastify.get(
+    `${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_GROUP}`,
+    routes.invitationsByGroup.get
+  );
+  fastify.delete(
+    `${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_GROUP}`,
+    routes.invitationsByGroup.delete
+  );
+  fastify.get(
+    `${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_SCOPE}`,
+    routes.invitationsByScope.get
+  );
+  fastify.delete(
+    `${cleanBasePath}${VORTEX_ROUTES.INVITATIONS_BY_SCOPE}`,
+    routes.invitationsByScope.delete
+  );
   fastify.post(`${cleanBasePath}${VORTEX_ROUTES.INVITATION_REINVITE}`, routes.invitationReinvite);
-  fastify.post(`${cleanBasePath}${VORTEX_ROUTES.SYNC_INTERNAL_INVITATION}`, routes.syncInternalInvitation);
+  fastify.post(
+    `${cleanBasePath}${VORTEX_ROUTES.SYNC_INTERNAL_INVITATION}`,
+    routes.syncInternalInvitation
+  );
 }
 
 /**

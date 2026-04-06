@@ -1,7 +1,15 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { Vortex } from '@teamvortexsoftware/vortex-node-22-sdk';
 import { getVortexConfig, authenticateRequest } from '../config';
-import { createApiResponse, createErrorResponse, parseRequestBody, validateRequiredFields, getQueryParam, getRouteParam, sanitizeInput } from '../utils';
+import {
+  createApiResponse,
+  createErrorResponse,
+  parseRequestBody,
+  validateRequiredFields,
+  getQueryParam,
+  getRouteParam,
+  sanitizeInput,
+} from '../utils';
 
 export async function handleGetInvitationsByTarget(request: FastifyRequest, reply: FastifyReply) {
   try {
@@ -21,14 +29,25 @@ export async function handleGetInvitationsByTarget(request: FastifyRequest, repl
       }
     } else if (!user) {
       // If no access control hook is configured, require authentication
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
-    const targetType = sanitizeInput(getQueryParam(request, 'targetType')) as 'email' | 'username' | 'phoneNumber';
+    const targetType = sanitizeInput(getQueryParam(request, 'targetType')) as
+      | 'email'
+      | 'username'
+      | 'phoneNumber';
     const targetValue = sanitizeInput(getQueryParam(request, 'targetValue'));
 
     if (!targetType || !targetValue) {
-      return createErrorResponse(reply, 'targetType and targetValue query parameters are required', 400);
+      return createErrorResponse(
+        reply,
+        'targetType and targetValue query parameters are required',
+        400
+      );
     }
 
     if (!['email', 'username', 'phoneNumber'].includes(targetType)) {
@@ -62,12 +81,18 @@ export async function handleGetInvitation(request: FastifyRequest, reply: Fastif
 
     // Check access control if hook is configured
     if (config.canAccessInvitation) {
-      const hasAccess = await config.canAccessInvitation(request, reply, user, { invitationId: sanitizedId });
+      const hasAccess = await config.canAccessInvitation(request, reply, user, {
+        invitationId: sanitizedId,
+      });
       if (!hasAccess) {
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!user) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
@@ -95,12 +120,18 @@ export async function handleRevokeInvitation(request: FastifyRequest, reply: Fas
     const user = await authenticateRequest(request, reply);
 
     if (config.canDeleteInvitation) {
-      const hasAccess = await config.canDeleteInvitation(request, reply, user, { invitationId: sanitizedId });
+      const hasAccess = await config.canDeleteInvitation(request, reply, user, {
+        invitationId: sanitizedId,
+      });
       if (!hasAccess) {
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!user) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
@@ -118,7 +149,7 @@ export async function handleAcceptInvitations(request: FastifyRequest, reply: Fa
       return createErrorResponse(reply, 'Method not allowed', 405);
     }
 
-    const body = await parseRequestBody(request) as Record<string, unknown>;
+    const body = (await parseRequestBody(request)) as Record<string, unknown>;
 
     const { invitationIds, target, user } = body;
 
@@ -127,7 +158,9 @@ export async function handleAcceptInvitations(request: FastifyRequest, reply: Fa
     }
 
     // Sanitize invitation IDs
-    const sanitizedIds: string[] = invitationIds.map((id: string) => sanitizeInput(id)).filter((id): id is string => Boolean(id));
+    const sanitizedIds: string[] = invitationIds
+      .map((id: string) => sanitizeInput(id))
+      .filter((id): id is string => Boolean(id));
     if (sanitizedIds.length !== invitationIds.length) {
       return createErrorResponse(reply, 'Invalid invitation IDs provided', 400);
     }
@@ -159,12 +192,16 @@ export async function handleAcceptInvitations(request: FastifyRequest, reply: Fa
       }
 
       if (!['email', 'username', 'phoneNumber', 'phone'].includes(targetObj.type)) {
-        return createErrorResponse(reply, 'target.type must be email, username, phoneNumber, or phone', 400);
+        return createErrorResponse(
+          reply,
+          'target.type must be email, username, phoneNumber, or phone',
+          400
+        );
       }
 
       acceptData = {
         type: targetObj.type,
-        value: sanitizeInput(targetObj.value) || targetObj.value
+        value: sanitizeInput(targetObj.value) || targetObj.value,
       };
     }
 
@@ -177,12 +214,21 @@ export async function handleAcceptInvitations(request: FastifyRequest, reply: Fa
         target: target as { type: string; value: string } | undefined,
         user: user as { email?: string; phone?: string; name?: string } | undefined,
       };
-      const hasAccess = await config.canAcceptInvitations(request, reply, authenticatedUser, resource);
+      const hasAccess = await config.canAcceptInvitations(
+        request,
+        reply,
+        authenticatedUser,
+        resource
+      );
       if (!hasAccess) {
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!authenticatedUser) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
@@ -194,16 +240,16 @@ export async function handleAcceptInvitations(request: FastifyRequest, reply: Fa
   }
 }
 
-export async function handleGetInvitationsByGroup(request: FastifyRequest, reply: FastifyReply) {
+export async function handleGetInvitationsByScope(request: FastifyRequest, reply: FastifyReply) {
   try {
     if (request.method !== 'GET') {
       return createErrorResponse(reply, 'Method not allowed', 405);
     }
 
-    const groupType = getRouteParam(request, 'groupType');
-    const groupId = getRouteParam(request, 'groupId');
-    const sanitizedGroupType = sanitizeInput(groupType);
-    const sanitizedGroupId = sanitizeInput(groupId);
+    const scopeType = getRouteParam(request, 'scopeType');
+    const scope = getRouteParam(request, 'scope');
+    const sanitizedGroupType = sanitizeInput(scopeType);
+    const sanitizedGroupId = sanitizeInput(scope);
 
     if (!sanitizedGroupType || !sanitizedGroupId) {
       return createErrorResponse(reply, 'Invalid group parameters', 400);
@@ -212,37 +258,41 @@ export async function handleGetInvitationsByGroup(request: FastifyRequest, reply
     const config = await getVortexConfig();
     const user = await authenticateRequest(request, reply);
 
-    if (config.canAccessInvitationsByGroup) {
-      const hasAccess = await config.canAccessInvitationsByGroup(request, reply, user, {
-        groupType: sanitizedGroupType,
-        groupId: sanitizedGroupId
+    if (config.canAccessInvitationsByScope) {
+      const hasAccess = await config.canAccessInvitationsByScope(request, reply, user, {
+        scopeType: sanitizedGroupType,
+        scope: sanitizedGroupId,
       });
       if (!hasAccess) {
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!user) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
-    const invitations = await vortex.getInvitationsByGroup(sanitizedGroupType, sanitizedGroupId);
+    const invitations = await vortex.getInvitationsByScope(sanitizedGroupType, sanitizedGroupId);
     return createApiResponse(reply, { invitations });
   } catch (error) {
-    console.error('Error in handleGetInvitationsByGroup:', error);
+    console.error('Error in handleGetInvitationsByScope:', error);
     return createErrorResponse(reply, 'An error occurred while processing your request', 500);
   }
 }
 
-export async function handleDeleteInvitationsByGroup(request: FastifyRequest, reply: FastifyReply) {
+export async function handleDeleteInvitationsByScope(request: FastifyRequest, reply: FastifyReply) {
   try {
     if (request.method !== 'DELETE') {
       return createErrorResponse(reply, 'Method not allowed', 405);
     }
 
-    const groupType = getRouteParam(request, 'groupType');
-    const groupId = getRouteParam(request, 'groupId');
-    const sanitizedGroupType = sanitizeInput(groupType);
-    const sanitizedGroupId = sanitizeInput(groupId);
+    const scopeType = getRouteParam(request, 'scopeType');
+    const scope = getRouteParam(request, 'scope');
+    const sanitizedGroupType = sanitizeInput(scopeType);
+    const sanitizedGroupId = sanitizeInput(scope);
 
     if (!sanitizedGroupType || !sanitizedGroupId) {
       return createErrorResponse(reply, 'Invalid group parameters', 400);
@@ -251,23 +301,27 @@ export async function handleDeleteInvitationsByGroup(request: FastifyRequest, re
     const config = await getVortexConfig();
     const user = await authenticateRequest(request, reply);
 
-    if (config.canDeleteInvitationsByGroup) {
-      const hasAccess = await config.canDeleteInvitationsByGroup(request, reply, user, {
-        groupType: sanitizedGroupType,
-        groupId: sanitizedGroupId
+    if (config.canDeleteInvitationsByScope) {
+      const hasAccess = await config.canDeleteInvitationsByScope(request, reply, user, {
+        scopeType: sanitizedGroupType,
+        scope: sanitizedGroupId,
       });
       if (!hasAccess) {
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!user) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
-    await vortex.deleteInvitationsByGroup(sanitizedGroupType, sanitizedGroupId);
+    await vortex.deleteInvitationsByScope(sanitizedGroupType, sanitizedGroupId);
     return createApiResponse(reply, { success: true });
   } catch (error) {
-    console.error('Error in handleDeleteInvitationsByGroup:', error);
+    console.error('Error in handleDeleteInvitationsByScope:', error);
     return createErrorResponse(reply, 'An error occurred while processing your request', 500);
   }
 }
@@ -278,7 +332,7 @@ export async function handleSyncInternalInvitation(request: FastifyRequest, repl
       return createErrorResponse(reply, 'Method not allowed', 405);
     }
 
-    const body = await parseRequestBody(request) as Record<string, unknown>;
+    const body = (await parseRequestBody(request)) as Record<string, unknown>;
 
     const { creatorId, targetValue, action, componentId } = body;
 
@@ -289,7 +343,11 @@ export async function handleSyncInternalInvitation(request: FastifyRequest, repl
       return createErrorResponse(reply, 'targetValue is required and must be a string', 400);
     }
     if (!action || !['accepted', 'declined'].includes(action as string)) {
-      return createErrorResponse(reply, 'action is required and must be "accepted" or "declined"', 400);
+      return createErrorResponse(
+        reply,
+        'action is required and must be "accepted" or "declined"',
+        400
+      );
     }
     if (!componentId || typeof componentId !== 'string') {
       return createErrorResponse(reply, 'componentId is required and must be a string', 400);
@@ -309,7 +367,11 @@ export async function handleSyncInternalInvitation(request: FastifyRequest, repl
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!user) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
@@ -342,12 +404,18 @@ export async function handleReinvite(request: FastifyRequest, reply: FastifyRepl
     const user = await authenticateRequest(request, reply);
 
     if (config.canReinvite) {
-      const hasAccess = await config.canReinvite(request, reply, user, { invitationId: sanitizedId });
+      const hasAccess = await config.canReinvite(request, reply, user, {
+        invitationId: sanitizedId,
+      });
       if (!hasAccess) {
         return createErrorResponse(reply, 'Access denied', 403);
       }
     } else if (!user) {
-      return createErrorResponse(reply, 'Access denied. Configure access control hooks for invitation endpoints.', 403);
+      return createErrorResponse(
+        reply,
+        'Access denied. Configure access control hooks for invitation endpoints.',
+        403
+      );
     }
 
     const vortex = new Vortex(config.apiKey);
@@ -357,4 +425,18 @@ export async function handleReinvite(request: FastifyRequest, reply: FastifyRepl
     console.error('Error in handleReinvite:', error);
     return createErrorResponse(reply, 'An error occurred while processing your request', 500);
   }
+}
+
+/**
+ * @deprecated Use handleGetInvitationsByScope instead
+ */
+export async function handleGetInvitationsByGroup(request: FastifyRequest, reply: FastifyReply) {
+  return handleGetInvitationsByScope(request, reply);
+}
+
+/**
+ * @deprecated Use handleDeleteInvitationsByScope instead
+ */
+export async function handleDeleteInvitationsByGroup(request: FastifyRequest, reply: FastifyReply) {
+  return handleDeleteInvitationsByScope(request, reply);
 }

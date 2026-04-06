@@ -3,7 +3,13 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 export interface AuthenticatedUser {
   userId: string;
   userEmail?: string;
+  /** User's display name (preferred) */
+  name?: string;
+  /** User's avatar URL (preferred) */
+  avatarUrl?: string;
+  /** @deprecated Use name instead */
   userName?: string;
+  /** @deprecated Use avatarUrl instead */
   userAvatarUrl?: string;
   adminScopes?: string[];
   /**
@@ -47,34 +53,54 @@ export interface InvitationTargetResource {
   };
 }
 
+export interface ScopeResource {
+  scopeType: string;
+  scope: string;
+}
+
+/** @deprecated Use ScopeResource instead */
 export interface GroupResource {
   groupType: string;
+  scopeType: string;
   groupId: string;
+  scope: string;
 }
 
 // Generic access control hook for Fastify
 export interface AccessControlHook<T = unknown> {
-  (request: FastifyRequest, reply: FastifyReply, user: AuthenticatedUser | null, resource?: T): Promise<boolean>;
+  (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    user: AuthenticatedUser | null,
+    resource?: T
+  ): Promise<boolean>;
 }
 
 // Specific hook types for better type safety
 export type InvitationAccessHook = AccessControlHook<InvitationResource>;
 export type InvitationTargetAccessHook = AccessControlHook<InvitationTargetResource>;
 export type SyncInternalInvitationAccessHook = AccessControlHook<SyncInternalInvitationResource>;
-export type GroupAccessHook = AccessControlHook<GroupResource>;
+export type ScopeAccessHook = AccessControlHook<ScopeResource>;
+/** @deprecated Use ScopeAccessHook instead */
+export type GroupAccessHook = ScopeAccessHook;
 export type BasicAccessHook = AccessControlHook<void>;
 
 export interface VortexConfig {
   apiKey: string;
   apiBaseUrl?: string;
-  authenticateUser?: (request: FastifyRequest, reply: FastifyReply) => Promise<AuthenticatedUser | null>;
+  authenticateUser?: (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) => Promise<AuthenticatedUser | null>;
   // Access control hooks for invitation endpoints
   canAccessInvitationsByTarget?: BasicAccessHook;
   canAccessInvitation?: InvitationAccessHook;
   canDeleteInvitation?: InvitationAccessHook;
   canAcceptInvitations?: InvitationTargetAccessHook;
   canAccessInvitationsByGroup?: GroupAccessHook;
+  canAccessInvitationsByScope?: ScopeAccessHook;
   canDeleteInvitationsByGroup?: GroupAccessHook;
+  canDeleteInvitationsByScope?: ScopeAccessHook;
   canReinvite?: InvitationAccessHook;
   canSyncInternalInvitation?: SyncInternalInvitationAccessHook;
 }
@@ -87,7 +113,9 @@ let lazyConfigFactory: (() => Promise<VortexConfig>) | null = null;
 
 export function configureVortex(config: VortexConfig): void {
   if (isConfigLocked && configTemplate) {
-    throw new Error('Vortex configuration is already locked. Configuration can only be set once for security reasons.');
+    throw new Error(
+      'Vortex configuration is already locked. Configuration can only be set once for security reasons.'
+    );
   }
 
   // Validate required config
@@ -99,9 +127,11 @@ export function configureVortex(config: VortexConfig): void {
   isConfigLocked = true;
 }
 
-export function configureVortexAsync(configPromiseOrConfig: Promise<VortexConfig> | VortexConfig): void | Promise<void> {
+export function configureVortexAsync(
+  configPromiseOrConfig: Promise<VortexConfig> | VortexConfig
+): void | Promise<void> {
   if (configPromiseOrConfig instanceof Promise) {
-    configPromise = configPromiseOrConfig.then(config => {
+    configPromise = configPromiseOrConfig.then((config) => {
       configureVortex(config);
     });
   } else {
@@ -111,7 +141,9 @@ export function configureVortexAsync(configPromiseOrConfig: Promise<VortexConfig
 
 export function configureVortexLazy(configFactory: () => Promise<VortexConfig>): void {
   if (isConfigLocked && configTemplate) {
-    throw new Error('Vortex configuration is already locked. Configuration can only be set once for security reasons.');
+    throw new Error(
+      'Vortex configuration is already locked. Configuration can only be set once for security reasons.'
+    );
   }
   lazyConfigFactory = configFactory;
 }
@@ -120,7 +152,7 @@ export async function getVortexConfig(): Promise<VortexConfig> {
   // Initialize lazily if lazy factory is set and config hasn't been initialized
   if (lazyConfigFactory && !configTemplate && !configPromise) {
     // Lazy initializing Vortex configuration
-    configPromise = lazyConfigFactory().then(config => {
+    configPromise = lazyConfigFactory().then((config) => {
       configureVortex(config);
     });
   }
@@ -137,7 +169,9 @@ export async function getVortexConfig(): Promise<VortexConfig> {
   };
 
   if (!baseConfig.apiKey) {
-    throw new Error('Vortex not configured. Call configureVortex() or set VORTEX_API_KEY environment variable');
+    throw new Error(
+      'Vortex not configured. Call configureVortex() or set VORTEX_API_KEY environment variable'
+    );
   }
 
   // Copy hooks from template if they exist
@@ -150,7 +184,9 @@ export async function getVortexConfig(): Promise<VortexConfig> {
       canDeleteInvitation: configTemplate.canDeleteInvitation,
       canAcceptInvitations: configTemplate.canAcceptInvitations,
       canAccessInvitationsByGroup: configTemplate.canAccessInvitationsByGroup,
+      canAccessInvitationsByScope: configTemplate.canAccessInvitationsByScope,
       canDeleteInvitationsByGroup: configTemplate.canDeleteInvitationsByGroup,
+      canDeleteInvitationsByScope: configTemplate.canDeleteInvitationsByScope,
       canReinvite: configTemplate.canReinvite,
       canSyncInternalInvitation: configTemplate.canSyncInternalInvitation,
     };
@@ -160,7 +196,10 @@ export async function getVortexConfig(): Promise<VortexConfig> {
 }
 
 // Helper function to authenticate user for any request
-export async function authenticateRequest(request: FastifyRequest, reply: FastifyReply): Promise<AuthenticatedUser | null> {
+export async function authenticateRequest(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<AuthenticatedUser | null> {
   const config = await getVortexConfig();
 
   if (!config.authenticateUser) {
@@ -189,7 +228,9 @@ export function createAllowAllAccessControl() {
     canDeleteInvitation: allowAll,
     canAcceptInvitations: allowAll,
     canAccessInvitationsByGroup: allowAll,
+    canAccessInvitationsByScope: allowAll,
     canDeleteInvitationsByGroup: allowAll,
+    canDeleteInvitationsByScope: allowAll,
     canReinvite: allowAll,
     canSyncInternalInvitation: allowAll,
   } satisfies Partial<VortexConfig>;

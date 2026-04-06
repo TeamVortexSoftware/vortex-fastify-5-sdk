@@ -1,4 +1,11 @@
-export { configureVortex, configureVortexAsync, configureVortexLazy, getVortexConfig, authenticateRequest, createAllowAllAccessControl } from './config';
+export {
+  configureVortex,
+  configureVortexAsync,
+  configureVortexLazy,
+  getVortexConfig,
+  authenticateRequest,
+  createAllowAllAccessControl,
+} from './config';
 export type {
   VortexConfig,
   AuthenticatedUser,
@@ -6,12 +13,14 @@ export type {
   InvitationResource,
   InvitationTargetResource,
   SyncInternalInvitationResource,
+  ScopeResource,
   GroupResource,
   InvitationAccessHook,
   InvitationTargetAccessHook,
   SyncInternalInvitationAccessHook,
+  ScopeAccessHook,
   GroupAccessHook,
-  BasicAccessHook
+  BasicAccessHook,
 } from './config';
 
 export {
@@ -29,9 +38,7 @@ export {
 } from './routes';
 export type { VortexPluginOptions } from './routes';
 
-export {
-  handleJwtGeneration,
-} from './handlers/jwt';
+export { handleJwtGeneration } from './handlers/jwt';
 
 export {
   handleGetInvitationsByTarget,
@@ -39,14 +46,14 @@ export {
   handleRevokeInvitation,
   handleAcceptInvitations,
   handleGetInvitationsByGroup,
+  handleGetInvitationsByScope,
   handleDeleteInvitationsByGroup,
+  handleDeleteInvitationsByScope,
   handleReinvite,
   handleSyncInternalInvitation,
 } from './handlers/invitations';
 
-export {
-  createVortexWebhookHandler,
-} from './handlers/webhooks';
+export { createVortexWebhookHandler } from './handlers/webhooks';
 
 export {
   createApiResponse,
